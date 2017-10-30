@@ -356,31 +356,37 @@ def preprocessing_for_train(frames, segment_num, channel, train_image_size, labe
     dense_label = label_index
     dense_label = tf.reshape(dense_label, [1])
 
-    videos_and_labels.append([frames, dense_label, ID])
+    videos_and_labels.append([processed_frames, dense_label, ID])
     return processed_frames, videos_and_labels
 
 
 
-def preprocessing_for_eval(frames, segment_num, channel, train_image_size, label_index, videos_and_labels, ID):
-    frames = tf.image.resize_images(frames, [256, 340])
+def preprocessing_for_eval(frames, segment_num, channel, eval_image_size, label_index, videos_and_labels, ID):
+
+    #frames = tf.image.resize_images(frames, [256, 340])
 
     # preprocessing
     # crop the image into network input size
 
-    crop_size = [segment_num, 240, 240, channel]
+    crop_size = [segment_num, eval_image_size, eval_image_size, channel]
 
-    cropped_frames = tf.slice(frames, begin=[0, 8, 50, 0], size=crop_size)
+    cropped_frames = tf.slice(frames, begin=[0, tf.cast((FLAGS.read_H - eval_image_size)/2, tf.int32), tf.cast((FLAGS.read_W - eval_image_size)/2, tf.int32), 0], size=crop_size)
 
-    cropped_frames = tf.image.resize_images(cropped_frames, [train_image_size, train_image_size])
+    cropped_frames = tf.image.resize_images(cropped_frames, [eval_image_size, eval_image_size])
 
-    # raondomly flip left and right
+    # flip left and right
     flip_frames = tf.reshape(cropped_frames,
-                             [segment_num * train_image_size, train_image_size, channel])
-    flip_frames = tf.image.random_flip_left_right(flip_frames)
+                             [segment_num * eval_image_size, eval_image_size, channel])
+    flip_frames = tf.image.flip_left_right(flip_frames)
     flip_frames = tf.reshape(flip_frames,
-                             [segment_num, train_image_size, train_image_size, channel])
+                             [segment_num, eval_image_size, eval_image_size, channel])
 
-    processed_frames = tf.subtract(flip_frames, 0.5)
+    cropped_img = tf.concat([cropped_frames, flip_frames], axis=0)
+
+    processed_frames = tf.reshape(cropped_img, [2 * segment_num, eval_image_size, eval_image_size, 3])
+    #processed_frames = tf.expand_dims(processed_frames, axis=0)
+
+    processed_frames = tf.subtract(processed_frames, 0.5)
     processed_frames = tf.multiply(processed_frames, 2.0)
 
     # dense_label = tf.cast(tf.sparse_to_indicator(label_index, num_classes), tf.float32)
@@ -388,7 +394,7 @@ def preprocessing_for_eval(frames, segment_num, channel, train_image_size, label
     dense_label = label_index
     dense_label = tf.reshape(dense_label, [1])
 
-    videos_and_labels.append([frames, dense_label, ID])
+    videos_and_labels.append([processed_frames, dense_label, ID])
     return processed_frames, videos_and_labels
 
 

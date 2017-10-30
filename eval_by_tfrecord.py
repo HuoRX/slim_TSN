@@ -205,66 +205,66 @@ def main(_):
         ##############################################################
         # Create a dataset provider that loads data from the dataset #
         ##############################################################
-        img_ori_batch, labels, height_read, width_read, id = preprocessing.train_inputs(
+        frames_batch, labels, height_read, width_read, id = preprocessing.train_inputs(
                                                                 dataset_dir, segment_num=segment_num,
                                                                 batch_size=batch_size,
-                                                                num_preprocess_threads=FLAGS.num_preprocessing_threads)
+                                                                num_preprocess_threads=FLAGS.num_preprocessing_threads,
+                                                                train=False, train_image_size=eval_image_size)
 
         # img_ori_batch = tf.cast(img_ori_batch, dtype=tf.uint8)
         # if img_ori_batch.dtype != tf.float32:
         #    img_ori_batch = tf.image.convert_image_dtype(img_ori_batch, dtype=tf.float32)
 
-        img_ori_batch = tf.reshape(img_ori_batch, [batch_size, segment_num, height_read, width_read, 3])
-        # img_ori_batch = tf.image.resize_images(img_ori_batch, [256, 340])
 
         # preprocessing
-        processed_images = tf.subtract(img_ori_batch, 0.5)
-        processed_images = tf.multiply(processed_images, 2.0)
+        #processed_images = tf.subtract(img_ori_batch, 0.5)
+        #processed_images = tf.multiply(processed_images, 2.0)
 
         # processed_images = img_ori_batch
 
-        frame_batch = list()
+        #frame_batch = list()
         #
         # crop 4 corners and center (with flip flop, total input shape is [10*segment, img_h, img_w, 3] for one video)
-        crop_size = [segment_num, eval_image_size, eval_image_size, 3]
-        crop_start = [[0, 0, 0, 0],                                                                # left top corner
-                      [0, height_read - eval_image_size, 0, 0],                                               # left bottom corner
-                      [0, 0, width_read- eval_image_size, 0],                                               # right top corner
-                      [0, height_read - eval_image_size, width_read - eval_image_size, 0],                              # right bottom corner
-                      [0, tf.cast((height_read - eval_image_size)/2, tf.int32), tf.cast((width_read - eval_image_size)/2, tf.int32), 0]]        # center
+        # crop_size = [segment_num, eval_image_size, eval_image_size, 3]
+        # crop_start = [[0, 0, 0, 0],                                                                # left top corner
+        #              [0, height_read - eval_image_size, 0, 0],                                # left bottom corner
+        #              [0, 0, width_read- eval_image_size, 0],                                  # right top corner
+        #              [0, height_read - eval_image_size, width_read - eval_image_size, 0],     # right bottom corner
+        #              ]        # center
 
-        for i in range(batch_size):
-            processing_images = processed_images[i]
+        # for i in range(batch_size):
+        #     processing_images = processed_images[i]
 
-            cropped_batch = tf.slice(processing_images, begin=crop_start[0], size=crop_size)
-            for ii in range(1, 5):
-                cropped_img = tf.slice(processing_images, begin=crop_start[ii], size=crop_size)
-                cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
+        #     cropped_batch = tf.slice(processing_images, begin=crop_start[0], size=crop_size)
+        #     for ii in range(1, 5):
+        #       cropped_img = tf.slice(processing_images, begin=crop_start[ii], size=crop_size)
+        #       cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
 
-            flipped_img = tf.reshape(processing_images, [segment_num*height_read, width_read, 3])
-            flipped_img = tf.image.flip_left_right(flipped_img)
-            flipped_img = tf.reshape(flipped_img,[segment_num, height_read, width_read, 3])
+        #     flipped_img = tf.reshape(processing_images, [segment_num*height_read, width_read, 3])
+        #     flipped_img = tf.image.flip_left_right(flipped_img)
+        #     flipped_img = tf.reshape(flipped_img,[segment_num, height_read, width_read, 3])
 
-            for ii in range(5):
-                cropped_img = tf.slice(flipped_img, begin=crop_start[ii], size=crop_size)
-                cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
+        #     for ii in range(5):
+        #       cropped_img = tf.slice(flipped_img, begin=crop_start[ii], size=crop_size)
+        #       cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
 
-            processed_batch = tf.reshape(cropped_batch, [10*segment_num, eval_image_size, eval_image_size, 3])
-            processed_batch = tf.expand_dims(processed_batch, axis=0)
+        #     processed_batch = tf.reshape(cropped_batch, [10*segment_num, eval_image_size, eval_image_size, 3])
+        #     processed_batch = tf.expand_dims(processed_batch, axis=0)
 
-            frame_batch.append(processed_batch)
+        #     frame_batch.append(processed_batch)
+
 
         ####################
         # Define the model #
         ####################
 
-        frames_group = tf.reshape(frame_batch, [batch_size * segment_num * 10, eval_image_size, eval_image_size, 3])
+        frames_group = tf.reshape(frames_batch, [batch_size * segment_num * 2, eval_image_size, eval_image_size, 3])
 
 
 
         logit_out, _ = network_fn(frames_group)
 
-        logit_out = tf.reshape(logit_out, [batch_size, segment_num*10, num_classes])
+        logit_out = tf.reshape(logit_out, [batch_size, segment_num*2, num_classes])
         logit_agg = agg_fn(logit_out, k=FLAGS.topK)
 
         logit_list = tf.reshape(logit_agg, [batch_size, num_classes])
