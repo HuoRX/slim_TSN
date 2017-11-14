@@ -300,7 +300,7 @@ def SampleTsnFrames_eval(video_buffer, num_segments, height_ori, width_ori):
 
     return raw_frames
 
-def preprocessing_for_train(frames, segment_num, channel, train_image_size, label_index, videos_and_labels, ID):
+def preprocessing_for_train(frames, segment_num, channel, train_image_size):
     ##################
     # preprocesssing #
     ##################
@@ -315,6 +315,10 @@ def preprocessing_for_train(frames, segment_num, channel, train_image_size, labe
 
     :type videos_and_labels: object
     """
+    height = FLAGS.read_H
+    width = FLAGS.read_W
+
+    frames = tf.reshape(frames,[segment_num, height, width, channel])
     frames = tf.image.resize_images(frames, [256, 340])
 
     # preprocessing
@@ -353,49 +357,59 @@ def preprocessing_for_train(frames, segment_num, channel, train_image_size, labe
 
     # dense_label = tf.cast(tf.sparse_to_indicator(label_index, num_classes), tf.float32)
     # dense_label.set_shape([num_classes])
-    dense_label = label_index
-    dense_label = tf.reshape(dense_label, [1])
 
-    videos_and_labels.append([processed_frames, dense_label, ID])
-    return processed_frames, videos_and_labels
+    return processed_frames
 
 
 
-def preprocessing_for_eval(frames, segment_num, channel, eval_image_size, label_index, videos_and_labels, ID):
+def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
 
-    #frames = tf.image.resize_images(frames, [256, 340])
-
+    # frames = tf.image.resize_images(frames, [256, 340])
     # preprocessing
     # crop the image into network input size
 
-    crop_size = [segment_num, eval_image_size, eval_image_size, channel]
+    height = FLAGS.read_H
+    width = FLAGS.read_W
 
-    cropped_frames = tf.slice(frames, begin=[0, tf.cast((FLAGS.read_H - eval_image_size)/2, tf.int32), tf.cast((FLAGS.read_W - eval_image_size)/2, tf.int32), 0], size=crop_size)
+    frames = tf.reshape(frames, [segment_num, height, width, channel])
 
-    cropped_frames = tf.image.resize_images(cropped_frames, [eval_image_size, eval_image_size])
-
-    # flip left and right
-    flip_frames = tf.reshape(cropped_frames,
-                             [segment_num * eval_image_size, eval_image_size, channel])
-    flip_frames = tf.image.flip_left_right(flip_frames)
-    flip_frames = tf.reshape(flip_frames,
-                             [segment_num, eval_image_size, eval_image_size, channel])
-
-    cropped_img = tf.concat([cropped_frames, flip_frames], axis=0)
-
-    processed_frames = tf.reshape(cropped_img, [2 * segment_num, eval_image_size, eval_image_size, 3])
-    #processed_frames = tf.expand_dims(processed_frames, axis=0)
-
-    processed_frames = tf.subtract(processed_frames, 0.5)
+    processed_frames = tf.subtract(frames, 0.5)
     processed_frames = tf.multiply(processed_frames, 2.0)
 
-    # dense_label = tf.cast(tf.sparse_to_indicator(label_index, num_classes), tf.float32)
-    # dense_label.set_shape([num_classes])
-    dense_label = label_index
-    dense_label = tf.reshape(dense_label, [1])
+    frame_batch = list()
 
-    videos_and_labels.append([processed_frames, dense_label, ID])
-    return processed_frames, videos_and_labels
+    crop_size = [segment_num, eval_image_size, eval_image_size, channel]
+
+    crop_start = [[0, 0, 0, 0],  # left top corner
+                  [0, height - eval_image_size, 0, 0],  # left bottom corner
+                  [0, 0, width - eval_image_size, 0],  # right top corner
+                  [0, height - eval_image_size, width - eval_image_size, 0],  # right bottom corner
+                  [0, tf.cast((height - eval_image_size) / 2, tf.int32),
+                   tf.cast((width - eval_image_size) / 2, tf.int32), 0]]  # center
+
+    for i in range(1):
+        processing_images = processed_frames
+
+        cropped_batch = tf.slice(processing_images, begin=crop_start[0], size=crop_size)
+        for ii in range(1, 5):
+            cropped_img = tf.slice(processing_images, begin=crop_start[ii], size=crop_size)
+            cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
+
+        flipped_img = tf.reshape(processing_images, [segment_num * height, width, channel])
+        flipped_img = tf.image.flip_left_right(flipped_img)
+        flipped_img = tf.reshape(flipped_img, [segment_num, height, width, channel])
+
+        for ii in range(5):
+            cropped_img = tf.slice(flipped_img, begin=crop_start[ii], size=crop_size)
+            cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
+
+        processed_batch = tf.reshape(cropped_batch, [10 * segment_num, eval_image_size, eval_image_size, channel])
+        processed_batch = tf.expand_dims(processed_batch, axis=0)
+
+        frame_batch.append(processed_batch)
+
+
+    return frame_batch
 
 
 
@@ -493,13 +507,20 @@ def batch_inputs(dataset, batch_size, train, num_preprocess_threads=None, segmen
 
             if train:
                 frames = SampleTsnFrames(video_buffer, segment_num, height, width)
-                frames, videos_and_labels = preprocessing_for_train(frames, segment_num, channel, train_image_size, label_index, videos_and_labels, ID)
+                frames = preprocessing_for_train(frames, segment_num, channel, train_image_size)
+                frames = tf.reshape(frames, [segment_num, train_image_size, train_image_size, channel])
 
             else:
                 frames = SampleTsnFrames_eval(video_buffer, segment_num, height, width)
-                frames, videos_and_labels = preprocessing_for_eval(frames, segment_num, channel, train_image_size, label_index, videos_and_labels, ID)
+                frames = preprocessing_for_eval(frames, segment_num, channel, train_image_size)
+                frames = tf.reshape(frames, [10*segment_num, train_image_size, train_image_size, channel])
 
-            frames = tf.reshape(frames, [segment_num, height, width, channel])
+
+
+            dense_label = label_index
+            dense_label = tf.reshape(dense_label, [1])
+
+            videos_and_labels.append([frames, dense_label, ID])
 
 
 
@@ -515,6 +536,10 @@ def batch_inputs(dataset, batch_size, train, num_preprocess_threads=None, segmen
         width = FLAGS.read_W
 
         videos = tf.cast(videos, tf.float32)
-        videos = tf.reshape(videos, shape=[batch_size*segment_num, height, width, channel])
+        if train:
+            videos = tf.reshape(videos, shape=[batch_size*segment_num, train_image_size, train_image_size, channel])
 
-        return videos, tf.reshape(dense_labels, [batch_size]), height, width, id_out
+        else:
+            videos = tf.reshape(videos, shape=[batch_size * segment_num*10, train_image_size, train_image_size, channel])
+
+        return videos, tf.reshape(dense_labels, [batch_size]), train_image_size, train_image_size, id_out

@@ -486,6 +486,13 @@ def main(_):
                                                                 batch_size=batch_size,
                                                                 num_preprocess_threads=FLAGS.num_preprocessing_threads,
                                                                 train_image_size=train_image_size)
+            a_out = img_ori_batch
+            labels = slim.one_hot_encoding(labels, FLAGS.num_classes - FLAGS.labels_offset)
+            b_out = labels
+            a_batch, b_batch = a_out, b_out
+
+            batch_queue = slim.prefetch_queue.prefetch_queue(
+                [a_batch, b_batch], capacity=2 * deploy_config.num_clones)
 
 
         ####################

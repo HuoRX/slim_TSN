@@ -258,13 +258,13 @@ def main(_):
         # Define the model #
         ####################
 
-        frames_group = tf.reshape(frames_batch, [batch_size * segment_num * 2, eval_image_size, eval_image_size, 3])
+        frames_group = tf.reshape(frames_batch, [batch_size * segment_num * 10, eval_image_size, eval_image_size, 3])
 
 
 
         logit_out, _ = network_fn(frames_group)
 
-        logit_out = tf.reshape(logit_out, [batch_size, segment_num*2, num_classes])
+        logit_out = tf.reshape(logit_out, [batch_size, segment_num*10, num_classes])
         logit_agg = agg_fn(logit_out, k=FLAGS.topK)
 
         logit_list = tf.reshape(logit_agg, [batch_size, num_classes])
