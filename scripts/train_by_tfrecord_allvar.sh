@@ -3,17 +3,16 @@
 export CUDA_VISIBLE_DEVICES=12,13,14,15
 
 python3 train_by_tfrecord_BN.py \
-    --train_dir=ckpt/ucf/rgb/v3_BN   \
+    --train_dir=ckpt/ucf/rgb/v3_BN/allvar   \
     --dataset_dir=/data2/jyli/UCF101/set1/train/tfrecord \
     --model_name=inception_v3_frozen_BN \
-    --checkpoint_path=ckpt/inception_v3.ckpt  \
-    --checkpoint_exclude_scopes=InceptionV3/Logits,InceptionV3/AuxLogits \
+    --checkpoint_path=ckpt/ucf/rgb/v3_BN/lastlayer  \
     --max_number_of_steps=6500  \
     --epoch_size=9537  \
     --num_clones=4  \
     --num_classes=101  \
     --batch_size=16  \
-    --train_image_size=299 \
+    --train_image_size=224 \
     --agg_fn=average \
     --topK=3  \
     --segment_num=5  \

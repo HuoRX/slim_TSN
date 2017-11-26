@@ -80,7 +80,7 @@ tf.app.flags.DEFINE_float(
         'weight_decay', 0.0005, 'The weight decay on the model weights.')
 
 tf.app.flags.DEFINE_float(
-        'dropout_keep', 0.8, 'The dropout keep ratio.')
+        'dropout_keep', 0.2, 'The dropout keep ratio.')
 
 tf.app.flags.DEFINE_string(
         'optimizer', 'momentum',

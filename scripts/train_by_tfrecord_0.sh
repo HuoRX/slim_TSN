@@ -17,7 +17,7 @@ python3 slim/train_by_tfrecord_BN.py \
     --dataset_dir=/data2/jyli/UCF101/set1/train/tfrecord \
     --model_name=inception_v3_frozen_BN \
     --checkpoint_exclude_scopes=InceptionV3/Logits,InceptionV3/AuxLogits \
-    --trainable_scopes=InceptionV3/Logits,InceptionV3/AuxLogits \
+    --trainable_scopes=InceptionV3/Logits \
     --checkpoint_path=build_net/nets/checkpoint/inception_v3.ckpt \
     --max_number_of_steps=2000 \
     --epoch_size=9537  \

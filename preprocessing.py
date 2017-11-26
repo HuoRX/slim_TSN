@@ -325,18 +325,38 @@ def preprocessing_for_train(frames, segment_num, channel, train_image_size):
     # crop the image into network input size
     random_l = tf.random_uniform([1], minval=0, maxval=4, dtype=tf.int32, seed=None, name=None)
     random_l = random_l[0]
-    random_s = tf.random_uniform([1], minval=0, maxval=5, dtype=tf.int32, seed=None, name=None)
+    random_l2 = tf.random_uniform([1], minval=0, maxval=4, dtype=tf.int32, seed=None, name=None)
+    random_l2 = random_l2[0]
+    random_s = tf.random_uniform([1], minval=0, maxval=13, dtype=tf.int32, seed=None, name=None)
     random_s = random_s[0]
-    crop_length = tf.convert_to_tensor([240, 224, 192, 168], dtype=tf.int32)
+
+    # crop_l is used for height, crop_l2 is used for width
+    # image is (height, width)
+    crop_length = tf.convert_to_tensor([256, 224, 192, 168], dtype=tf.int32)
     crop_l = crop_length[random_l]
-    crop_size = [segment_num, crop_l, crop_l, channel]
+    crop_l2 = crop_length[random_l2]
+    crop_size = [segment_num, crop_l, crop_l2, channel]
+
     center_h = tf.div(tf.subtract(256, crop_l), 2)
-    center_w = tf.div(tf.subtract(340, crop_l), 2)
+    quarter_h = tf.div(tf.subtract(256, crop_l), 4)
+    quarter_h_lower = tf.multiply(tf.div(tf.subtract(256, crop_l), 4), 3)
+
+    center_w = tf.div(tf.subtract(340, crop_l2), 2)
+    quarter_w = tf.div(tf.subtract(340, crop_l2), 4)
+    quarter_w_lower = tf.multiply(tf.div(tf.subtract(340, crop_l2), 4), 3)
 
     crop_start_all = tf.convert_to_tensor([[0, 0, 0, 0],
-                                           [0, 0, 340 - crop_l, 0],
+                                           [0, 0, center_w, 0],
+                                           [0, 0, 340 - crop_l2, 0],
+                                           [0, quarter_h, quarter_w, 0],
+                                           [0, quarter_h, quarter_w_lower, 0],
+                                           [0, center_h, 0, 0],
+                                           [0, center_h, 340 - crop_l2, 0],
+                                           [0, quarter_h_lower, quarter_w, 0],
+                                           [0, quarter_h_lower, quarter_w_lower, 0],
                                            [0, 256 - crop_l, 0, 0],
-                                           [0, 256 - crop_l, 340 - crop_l, 0],
+                                           [0, 256 - crop_l, center_w, 0],
+                                           [0, 256 - crop_l, 340 - crop_l2, 0],
                                            [0, center_h, center_w, 0]])
 
     crop_start = crop_start_all[random_s]
@@ -372,6 +392,7 @@ def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
     width = FLAGS.read_W
 
     frames = tf.reshape(frames, [segment_num, height, width, channel])
+    frames = tf.image.resize_images(frames,[256, 340])
 
     processed_frames = tf.subtract(frames, 0.5)
     processed_frames = tf.multiply(processed_frames, 2.0)
@@ -395,9 +416,9 @@ def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
             cropped_img = tf.slice(processing_images, begin=crop_start[ii], size=crop_size)
             cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
 
-        flipped_img = tf.reshape(processing_images, [segment_num * height, width, channel])
+        flipped_img = tf.reshape(processing_images, [segment_num * 256, 340, channel])
         flipped_img = tf.image.flip_left_right(flipped_img)
-        flipped_img = tf.reshape(flipped_img, [segment_num, height, width, channel])
+        flipped_img = tf.reshape(flipped_img, [segment_num, 256, 340, channel])
 
         for ii in range(5):
             cropped_img = tf.slice(flipped_img, begin=crop_start[ii], size=crop_size)
