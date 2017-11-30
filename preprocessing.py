@@ -392,7 +392,7 @@ def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
     width = FLAGS.read_W
 
     frames = tf.reshape(frames, [segment_num, height, width, channel])
-    frames = tf.image.resize_images(frames,[256, 340])
+    frames = tf.image.resize_images(frames,[342, 456])
 
     processed_frames = tf.subtract(frames, 0.5)
     processed_frames = tf.multiply(processed_frames, 2.0)
@@ -402,11 +402,11 @@ def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
     crop_size = [segment_num, eval_image_size, eval_image_size, channel]
 
     crop_start = [[0, 0, 0, 0],  # left top corner
-                  [0, height - eval_image_size, 0, 0],  # left bottom corner
-                  [0, 0, width - eval_image_size, 0],  # right top corner
-                  [0, height - eval_image_size, width - eval_image_size, 0],  # right bottom corner
-                  [0, tf.cast((height - eval_image_size) / 2, tf.int32),
-                   tf.cast((width - eval_image_size) / 2, tf.int32), 0]]  # center
+                  [0, 342 - eval_image_size, 0, 0],  # left bottom corner
+                  [0, 0, 456 - eval_image_size, 0],  # right top corner
+                  [0, 342 - eval_image_size, 456 - eval_image_size, 0],  # right bottom corner
+                  [0, tf.cast((342 - eval_image_size) / 2, tf.int32),
+                   tf.cast((456 - eval_image_size) / 2, tf.int32), 0]]  # center
 
     for i in range(1):
         processing_images = processed_frames
@@ -416,9 +416,9 @@ def preprocessing_for_eval(frames, segment_num, channel, eval_image_size):
             cropped_img = tf.slice(processing_images, begin=crop_start[ii], size=crop_size)
             cropped_batch = tf.concat([cropped_batch, cropped_img], axis=0)
 
-        flipped_img = tf.reshape(processing_images, [segment_num * 256, 340, channel])
+        flipped_img = tf.reshape(processing_images, [segment_num * 342, 456, channel])
         flipped_img = tf.image.flip_left_right(flipped_img)
-        flipped_img = tf.reshape(flipped_img, [segment_num, 256, 340, channel])
+        flipped_img = tf.reshape(flipped_img, [segment_num, 342, 456, channel])
 
         for ii in range(5):
             cropped_img = tf.slice(flipped_img, begin=crop_start[ii], size=crop_size)

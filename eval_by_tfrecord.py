@@ -103,7 +103,7 @@ tf.app.flags.DEFINE_float(
 
 
 tf.app.flags.DEFINE_integer(
-        'eval_image_size', 224, 'Eval image size')
+        'eval_image_size', 299, 'Eval image size')
 
 
 tf.app.flags.DEFINE_integer(
@@ -137,7 +137,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def ID_dic(ID, label_text=None):
     if label_text is None:
-        label_text = '/home/herbert/python_project/TSN/data/ucf101/split1/train/category.txt'
+        label_text = '/home/herbert/python_project/TSN/data/ucf101/split2/train/category.txt'
 
     label_list = open(label_text)
     lines = label_list.readlines()

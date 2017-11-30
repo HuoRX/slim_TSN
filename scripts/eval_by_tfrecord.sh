@@ -3,10 +3,10 @@
 # predict one frame by using predict_frame_script.py
 # It's the same as slim/predict_frame.py
 
-export CUDA_VISIBLE_DEVICES=12,13,14,15
+export CUDA_VISIBLE_DEVICES=6,7,8,12
 
 python3 eval_by_tfrecord.py \
-    --dataset_dir=/data2/jyli/UCF101/set1/test/tfrecord \
+    --dataset_dir=/data2/jyli/UCF101/set3/test/tfrecord \
     --model_name=inception_v3_frozen_BN \
     --checkpoint_path=ckpt/ucf/rgb/v3_BN/allvar \
     --batch_size=2  \
